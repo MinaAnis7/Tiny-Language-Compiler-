@@ -1,0 +1,247 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace JASON_Compiler
+{
+    public class Node
+    {
+        public List<Node> Children = new List<Node>();
+        
+        public string Name;
+        public Node(string N)
+        {
+            this.Name = N;
+        }
+    }
+    public class Parser
+    {
+        int InputPointer = 0;
+        List<Token> TokenStream;
+        public  Node root;
+        
+        public Node StartParsing(List<Token> TokenStream)
+        {
+            this.InputPointer = 0;
+            this.TokenStream = TokenStream;
+            root = new Node("Program");
+            root.Children.Add(Program());
+            return root;
+        }
+        Node Program()
+        {
+            Node program = new Node("Program");
+            program.Children.Add(Header());
+            //program.Children.Add(DeclSec());
+            program.Children.Add(Block());
+            program.Children.Add(match(Token_Class.Dot));
+            MessageBox.Show("Success");
+            return program;
+        }
+        
+        Node Header()
+        {
+            Node header = new Node("Header");
+            // write your code here to check the header sructure
+            header.Children.Add(match(Token_Class.Program));
+            header.Children.Add(match(Token_Class.Idenifier));
+            header.Children.Add(match(Token_Class.Semicolon));
+            return header;
+        }
+        Node DeclSec()
+        {
+            Node declsec = new Node("DeclSec");
+            // write your code here to check atleast the declare sturcure 
+            // without adding procedures
+            return declsec;
+        }
+        Node Block()
+        {
+            Node block = new Node("block");
+            // write your code here to match statements
+            block.Children.Add(match(Token_Class.Begin));
+            block.Children.Add(Statments());
+            block.Children.Add(match(Token_Class.End));
+            return block;
+        }
+
+        // Implement your logic here
+        public Node Statments()
+        {
+            Node statments = new Node("Statments");
+            statments.Children.Add(Statment());
+            statments.Children.Add(State());
+            return statments;
+        }
+
+        public Node Statment()
+        {
+            Node statment = new Node("Statment");
+            if (InputPointer < TokenStream.Count && Token_Class.Read == TokenStream[InputPointer].token_type)
+            {
+                statment.Children.Add(match(Token_Class.Read));
+                statment.Children.Add(match(Token_Class.Idenifier));
+            }
+            else if (InputPointer < TokenStream.Count && Token_Class.Write == TokenStream[InputPointer].token_type)
+            {
+                statment.Children.Add(match(Token_Class.Write));
+                statment.Children.Add(match(Token_Class.Idenifier));
+            }
+            else if (InputPointer < TokenStream.Count && Token_Class.Set == TokenStream[InputPointer].token_type)
+            {
+                statment.Children.Add(match(Token_Class.Set));
+                statment.Children.Add(match(Token_Class.Idenifier));
+                statment.Children.Add(match(Token_Class.EqualOp));
+                statment.Children.Add(Expression());
+            }
+            return statment;
+        }
+
+        public Node State()
+        {
+            Node state = new Node("State");
+            if (InputPointer < TokenStream.Count && Token_Class.Semicolon == TokenStream[InputPointer].token_type)
+            {
+                state.Children.Add(match(Token_Class.Semicolon));
+                state.Children.Add(Statment());
+                state.Children.Add(State());
+            }
+            else
+                return null;
+            return state;
+        }
+
+        public Node Expression()
+        {
+            Node expression = new Node("Expression");
+            expression.Children.Add(Term());
+            expression.Children.Add(Exp());
+            return expression;
+        }
+
+        public Node Exp()
+        {
+            Node exp = new Node("Exp");
+            if (InputPointer < TokenStream.Count && Token_Class.PlusOp == TokenStream[InputPointer].token_type)
+            {
+                exp.Children.Add(match(Token_Class.PlusOp));
+                exp.Children.Add(Term());
+                exp.Children.Add(Exp());
+            }
+            else if (InputPointer < TokenStream.Count && Token_Class.MinusOp == TokenStream[InputPointer].token_type)
+            {
+                exp.Children.Add(match(Token_Class.MinusOp));
+                exp.Children.Add(Term());
+                exp.Children.Add(Exp());
+            }
+            else
+            {
+                return null;
+            }
+             return exp;
+        }
+        public Node Term()
+        {
+            Node term = new Node("Term");
+            term.Children.Add(Factor());
+            term.Children.Add(Ter());
+            return term;
+        }
+
+        public Node Factor()
+        {
+            Node factor = new Node("Factor");
+            if (InputPointer < TokenStream.Count && Token_Class.Idenifier == TokenStream[InputPointer].token_type)
+            {
+                factor.Children.Add(match(Token_Class.Idenifier));
+            }
+            else
+            {
+                factor.Children.Add(match(Token_Class.Constant));
+            }
+            return factor;
+        }
+
+        public Node Ter()
+        {
+            Node ter = new Node("Ter");
+            if (InputPointer < TokenStream.Count && Token_Class.MultiplyOp == TokenStream[InputPointer].token_type)
+            {
+                ter.Children.Add(match(Token_Class.MultiplyOp));
+                ter.Children.Add(Factor());
+                ter.Children.Add(Ter());
+            }
+            else if (InputPointer < TokenStream.Count && Token_Class.DivideOp == TokenStream[InputPointer].token_type)
+            {
+                ter.Children.Add(match(Token_Class.DivideOp));
+                ter.Children.Add(Factor());
+                ter.Children.Add(Ter());
+            }
+            else
+            {
+                return null;
+            }
+            return ter;
+        }
+
+        public Node match(Token_Class ExpectedToken)
+        {
+
+            if (InputPointer < TokenStream.Count)
+            {
+                if (ExpectedToken == TokenStream[InputPointer].token_type)
+                {
+                    InputPointer++;
+                    Node newNode = new Node(ExpectedToken.ToString());
+
+                    return newNode;
+
+                }
+
+                else
+                {
+                    Errors.Error_List.Add("Parsing Error: Expected "
+                        + ExpectedToken.ToString() + " and " +
+                        TokenStream[InputPointer].token_type.ToString() +
+                        "  found\r\n");
+                    InputPointer++;
+                    return null;
+                }
+            }
+            else
+            {
+                Errors.Error_List.Add("Parsing Error: Expected "
+                        + ExpectedToken.ToString()  + "\r\n");
+                InputPointer++;
+                return null;
+            }
+        }
+
+        public static TreeNode PrintParseTree(Node root)
+        {
+            TreeNode tree = new TreeNode("Parse Tree");
+            TreeNode treeRoot = PrintTree(root);
+            if (treeRoot != null)
+                tree.Nodes.Add(treeRoot);
+            return tree;
+        }
+        static TreeNode PrintTree(Node root)
+        {
+            if (root == null || root.Name == null)
+                return null;
+            TreeNode tree = new TreeNode(root.Name);
+            if (root.Children.Count == 0)
+                return tree;
+            foreach (Node child in root.Children)
+            {
+                if (child == null)
+                    continue;
+                tree.Nodes.Add(PrintTree(child));
+            }
+            return tree;
+        }
+    }
+}
