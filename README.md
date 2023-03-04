@@ -1,5 +1,5 @@
 # Tiny-Language Compiler
-## Project Describtion
+## Project Description
 Compiler for Tiny-Programming Language that checks whether the language is typed correctly or not passing Through the Compilation phases. And Finally, creates a parse tree to show the structure of typed code in that language.
 
 ## Compilation Phases
